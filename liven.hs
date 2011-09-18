@@ -102,14 +102,14 @@ matchSelector (s:ss) n = if checkPreds s n then PartialMatch ss else NoMatch
 
 
 -- The high-level:
-run :: [(Selector, Transform)] -> Document -> Document
-run ts doc = foldl (\doc (s, t) -> doTransform s t doc) doc ts
+runTransforms :: [(Selector, Transform)] -> Document -> Document
+runTransforms ts doc = foldl (\doc (s, t) -> transform s t doc) doc ts
 
-doTransform :: Selector -> Transform -> Document -> Document
-doTransform s t doc = modifyDocContent (doTransform' s t) doc
+transform :: Selector -> Transform -> Document -> Document
+transform s t doc = modifyDocContent (transform' s t) doc
 
-doTransform' :: Selector -> Transform -> [Node] -> [Node]
-doTransform' s t nodes = concat $ nmap (t' s) nodes
+transform' :: Selector -> Transform -> [Node] -> [Node]
+transform' s t nodes = concat $ nmap (t' s) nodes
   where
     t' s' = \n -> case matchSelector s' n of
                     Match -> t n
@@ -137,16 +137,16 @@ testDoc = let htmlBS = BSC.pack "<!doctype html><html><head><title></title></hea
             (Right doc) ->  doc
 
 
-doTest = doTransform 
+doTest = transform 
          [[hasTag "body"]]
          (addClass "test-page" >=> 
           append [TextNode (T.pack "Some Text")])
-         $ doTransform [[hasTag "p"]]
+         $ transform [[hasTag "p"]]
          (addClass "old-p" >=>
           replaceWith [Element (T.pack "p") [] [TextNode (T.pack "111")],
                        Element (T.pack "p") [] [TextNode (T.pack "222")]] >=>
           addClass "new-p")
-         $ doTransform 
+         $ transform 
          [[hasTag "section"], [hasTag "p"]]
          (setTag "h1" >=> 
           append [TextNode (T.pack "here is some updated content")] >=> 
