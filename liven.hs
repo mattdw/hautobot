@@ -6,6 +6,11 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as T
 
+-- Transforms take a node, and return none, one or many Nodes.
+type Transform = Node -> [Node]
+-- A Selector is a list of lists of predicates.
+type Selector = [[Node -> Bool]]
+
 
 -- Predicates
 
@@ -111,10 +116,6 @@ at sts n = foldl (\ns (s, t) -> transform' s t ns) [n] sts
 
 checkPreds :: [Node -> Bool] -> Node -> Bool
 checkPreds ps n = all id $ map (flip ($) n) ps
-
--- Transforms take a node, and return none, one or many Nodes.
-type Transform = Node -> [Node]
-type Selector = [[Node -> Bool]]
 
 data Match = Match                 -- node matches
            | PartialMatch Selector -- node matches prefix. contains remaining 
