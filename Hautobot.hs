@@ -106,6 +106,8 @@ content ns = \node -> [node { elementChildren = ns }]
 append :: [Node] -> Transform
 append ns = \node -> [node { elementChildren = (elementChildren node) ++ ns }]
 
+prepend :: [Node] -> Transform
+prepend ns = \node -> [node { elementChildren = ns ++ (elementChildren node) }]
 at :: [(Selector, Transform)] -> Transform
 at sts n = foldl (\ns (s, t) -> transform' s t ns) [n] sts
 
