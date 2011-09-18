@@ -1,9 +1,11 @@
-Liven is a Haskell approximation of Christophe Grand's Enlive
+hautobot is a Haskell approximation of Christophe Grand's Enlive
 (<https://github.com/cgrand/enlive>).
 
 It depends on the Text.XmlHtml package
 (<http://hackage.haskell.org/package/xmlhtml-0.1.5.2>), which it uses
 for its internal datastructures and lower-level APIs.
+
+Apologies for the name.
 
 ## Details
 
