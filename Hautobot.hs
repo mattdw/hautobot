@@ -75,8 +75,8 @@ setTag :: String -> Transform
 setTag t n = [n { elementTag = T.pack t }]
 
 -- | Modify attribute with a function.
--- Function is `Maybe (T.Text currentVal) -> Maybe (T.Text newVal)`.
--- Returning `Nothing` will delete the attribue.
+-- Function is @Maybe (Text currentVal) -> Maybe (Text newVal)@.
+-- Returning @Nothing@ will delete the attribue.
 modifyAttr :: String -> (Maybe T.Text -> Maybe T.Text) -> Transform
 modifyAttr k f = \node -> let attrName = (T.pack k)
                               val = getAttribute attrName node

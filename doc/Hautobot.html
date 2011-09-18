@@ -37,7 +37,7 @@ window.onload = function () {pageLoad();setSynopsis("mini_Hautobot.html");};
 </p></td></tr><tr><td class="src">-&gt; <a href="Hautobot.html#t:Transform">Transform</a></td><td class="doc empty">&nbsp;</td></tr></table></div><div class="doc"><p>Set an attribute (overwriting any existing value)
 </p></div></div><div class="top"><p class="src"><a name="v:setTag" class="def">setTag</a> :: String -&gt; <a href="Hautobot.html#t:Transform">Transform</a></p><div class="doc"><p>Rename a tag
 </p></div></div><div class="top"><p class="src"><a name="v:modifyAttr" class="def">modifyAttr</a> :: String -&gt; (Maybe Text -&gt; Maybe Text) -&gt; <a href="Hautobot.html#t:Transform">Transform</a></p><div class="doc"><p>Modify attribute with a function.
- Function is `Maybe (T.Text currentVal) -&gt; Maybe (T.Text newVal)`.
+ Function is <code>Maybe (Text currentVal) -&gt; Maybe (Text newVal)</code>.
  Returning <code>Nothing</code> will delete the attribue.
 </p></div></div><div class="top"><p class="src"><a name="v:getAttrWords" class="def">getAttrWords</a> :: String -&gt; Node -&gt; [Text]</p><div class="doc"><p>Remove an attribute
 </p><p>Get an attribute value, split into <code>words</code>
