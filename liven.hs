@@ -46,6 +46,8 @@ setTag :: String -> Transform
 setTag t n = [n { elementTag = T.pack t }]
 
 
+-- takes a function of Maybe (T.Text currentVal) -> Maybe (T.Text newVal)
+-- returning `Nothing` will delete the attribue.
 modifyAttr :: String -> (Maybe T.Text -> Maybe T.Text) -> Transform
 modifyAttr k f = \node -> let attrName = (T.pack k)
                               val = getAttribute attrName node
@@ -58,13 +60,34 @@ modifyAttr k f = \node -> let attrName = (T.pack k)
 
 delAttr k = modifyAttr k $ const Nothing
 
+getAttrWords :: String -> Node -> [T.Text]
+getAttrWords k = let attrName = (T.pack k)
+             in \node -> case (getAttribute attrName node) of
+               Nothing -> []
+               Just val -> T.words . T.strip $ val
+
+setAttrWords :: String -> [T.Text] -> Transform
+setAttrWords k words = \node -> [setAttribute (T.pack k) (T.unwords words) node]
+
+
+addAttrWord :: String -> String -> Transform
+addAttrWord k v = \node ->
+  let newWord = (T.pack v)
+      words = getAttrWords k node
+      newWords = newWord:(filter (/=newWord) words)
+  in setAttrWords k newWords node
+
+delAttrWord :: String -> String -> Transform
+delAttrWord k v = \node ->
+  setAttrWords k (filter (/=(T.pack v)) $ getAttrWords k node) node
+
 
 addClass :: String -> Transform
-addClass cls = \node -> if hasClass cls node then [node]
-                        else modifyAttr "class" appendCls node
-  where appendCls (Just t) = Just $ t `T.append` (T.pack " ") `T.append` packedCls
-        appendCls Nothing = Just packedCls
-        packedCls = (T.pack cls)
+addClass cls = addAttrWord "class" cls
+
+removeClass :: String -> Transform
+removeClass cls = delAttrWord "class" cls
+
 
 replaceWith :: [Node] -> Transform
 replaceWith ns = const ns
@@ -77,6 +100,9 @@ content ns = \node -> [node { elementChildren = ns }]
 
 append :: [Node] -> Transform
 append ns = \node -> [node { elementChildren = (elementChildren node) ++ ns }]
+
+at :: [(Selector, Transform)] -> Transform
+at sts n = foldl (\ns (s, t) -> transform' s t ns) [n] sts
 
 -- selector examples
 -- "a[href]" => [[hasAttr "href", hasTag "a"]]
@@ -137,17 +163,23 @@ testDoc = let htmlBS = BSC.pack "<!doctype html><html><head><title></title></hea
             (Right doc) ->  doc
 
 
-doTest = transform 
-         [[hasTag "body"]]
-         (addClass "test-page" >=> 
-          append [TextNode (T.pack "Some Text")])
-         $ transform [[hasTag "p"]]
-         (addClass "old-p" >=>
-          replaceWith [Element (T.pack "p") [] [TextNode (T.pack "111")],
-                       Element (T.pack "p") [] [TextNode (T.pack "222")]] >=>
-          addClass "new-p")
-         $ transform 
-         [[hasTag "section"], [hasTag "p"]]
-         (setTag "h1" >=> 
-          append [TextNode (T.pack "here is some updated content")] >=> 
-          setAttr "id" "noeyedeer") testDoc 
+doTest = 
+  transform
+  [[hasTag "article"]]
+  (at [([[hasTag "h1"]], setAttr "id" "title")] >=>
+   append [Element (T.pack "blockquote") [] [TextNode (T.pack "a quote")]] >=>
+   at [([[hasTag "blockquote"]], addClass "quote-class")])
+  $ transform 
+  [[hasTag "body"]]
+  (addClass "test-page" >=> 
+   append [TextNode (T.pack "Some Text")])
+  $ transform [[hasTag "p"]]
+  (addClass "old-p" >=>
+   replaceWith [Element (T.pack "p") [] [TextNode (T.pack "111")],
+                Element (T.pack "p") [] [TextNode (T.pack "222")]] >=>
+   addClass "new-p")
+  $ transform 
+  [[hasTag "section"], [hasTag "p"]]
+  (setTag "h1" >=> 
+   append [TextNode (T.pack "here is some updated content")] >=> 
+   setAttr "id" "noeyedeer") testDoc 
