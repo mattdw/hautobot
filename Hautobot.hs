@@ -64,13 +64,13 @@ hasClass = hasAttrWord "class"
 
 -- ** Transformers
 
--- | Set an attribute (overwriting any existing value)
+-- | Set an attribute (overwriting any existing value).
 setAttr :: String              -- ^ attribute name
            -> String           -- ^ attribute value
            -> Transform
 setAttr k v = (:[]) . setAttribute (T.pack k) (T.pack v)
 
--- | Rename a tag
+-- | Rename a tag.
 setTag :: String -> Transform
 setTag t n = [n { elementTag = T.pack t }]
 
@@ -87,17 +87,19 @@ modifyAttr k f = \node -> let attrName = (T.pack k)
                                                                    elementAttrs node} ]
                             Just attrVal -> [setAttribute attrName attrVal node]
 
--- | Remove an attribute
+-- | Remove an attribute.
+delAttr :: String -> Transform
 delAttr k = modifyAttr k $ const Nothing
 
--- | Get an attribute value, split into 'words'
+-- | Get an attribute value, split into words.
+-- Words are just white-space delimited.
 getAttrWords :: String -> Node -> [T.Text]
 getAttrWords k = let attrName = (T.pack k)
              in \node -> case (getAttribute attrName node) of
                Nothing -> []
                Just val -> T.words . T.strip $ val
 
--- | Set an attribute with a list of words
+-- | Set an attribute from a list of words. Joins words with spaces.
 setAttrWords :: String -> [T.Text] -> Transform
 setAttrWords k words = \node -> [setAttribute (T.pack k) (T.unwords words) node]
 
@@ -111,7 +113,7 @@ addAttrWord k v = \node ->
       newWords = newWord:(filter (/=newWord) words)
   in setAttrWords k newWords node
 
--- | Remove a word from anywhere in an attribute
+-- | Remove a word from anywhere in an attribute.
 delAttrWord :: String             -- ^ attribute name
                -> String          -- ^ word to delete
                -> Transform
@@ -122,19 +124,19 @@ delAttrWord k v = \node ->
 addClass :: String -> Transform
 addClass cls = addAttrWord "class" cls
 
--- | Remove a class name from an element
+-- | Remove a class name from an element.
 removeClass :: String -> Transform
 removeClass cls = delAttrWord "class" cls
 
--- | Replace the node with the provide node(s)
+-- | Replace the node with the provide node(s).
 replaceWith :: [Node] -> Transform
 replaceWith ns = const ns
 
--- | Remove the Node from the document
+-- | Remove the Node from the document.
 remove :: Transform
 remove = replaceWith []
 
--- | Replace all of the node's children with the given node(s)
+-- | Replace all of the node's children with the given node(s).
 content :: [Node] -> Transform
 content ns = \node -> [node { elementChildren = ns }]
 
