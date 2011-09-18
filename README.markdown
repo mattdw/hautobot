@@ -14,16 +14,15 @@ a full traversal of the document tree (although this can be somewhat
 mitigated by use of the 'at' function to traverse only sub-trees.)
 
 Selectors are currently pretty basic; a selector is just a list of
-lists of predicates. All predicates in a step (inner list) must match, and multiple
-steps represent nesting/descendants. For example:
+lists of predicates. All predicates in a step (inner list) must match,
+and multiple steps represent nesting/descendants. For example:
 
     [[hasTag "section", hasId "main"], [hasTag "article", hasClass "story]]
 
-Would match all `<article class="story">` inside `<section
-id="main">`. In future this library will support a string-based
-CSS-like selector syntax, so you could do `"section#main
-article.story"` for the above. Obviously this would be a marked
-improvement.
+…would match all `<article class="story">` inside `<section id="main">`. In 
+future this library will support a string-based CSS-like selector syntax, so 
+you could do `"section#main article.story"` for the above. Obviously this 
+would be a marked improvement.
 
 Transforms are (list-monadic) functions of `Node -> [Node]`, and can be composed
 with `>=>` and `<=<`.
