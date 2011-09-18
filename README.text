@@ -3,7 +3,7 @@ Liven is a Haskell approximation of Christophe Grand's Enlive
 
 It depends on the Text.XmlHtml package
 (<http://hackage.haskell.org/package/xmlhtml-0.1.5.2>), which it uses
-for its internal datastructures.
+for its internal datastructures and lower-level APIs.
 
 ## Details
 
@@ -17,25 +17,30 @@ steps represent nesting/descendants. For example:
 
     [[hasTag "section", hasId "main"], [hasTag "article", hasClass "story]]
 
-Would match all `<article class="story">` inside `<section id="main">`.
+Would match all `<article class="story">` inside `<section
+id="main">`. In future this library will support a string-based
+CSS-like selector syntax, so you could do `"section#main
+article.story"` for the above. Obviously this would be a marked
+improvement.
 
-Transforms are just (list-monadic) functions of `Node -> [Node]`, and can be composed
+Transforms are (list-monadic) functions of `Node -> [Node]`, and can be composed
 with `>=>` and `<=<`.
 
 ## Use
 
-Look at testDoc and doTest at the bottom of the main source file. In
+Look at `testDoc` and `doTest` at the bottom of the main source file. In
 brief:
 
     let document = parseHTML "a name" htmlAsByteString
-        selector = [[hasTag "body"], [hasTag "article"]]
-        transFun = addClass "classname" >=> append [TextNode (T.pack
-        "Some Content")] >=> setAttr "data-foo" "bar"
+      selector = [[hasTag "body"], [hasTag "article"]]
+      transFun = addClass "classname" >=> 
+                 append [TextNode (T.pack "Some Content")] >=> 
+                 setAttr "data-foo" "bar"
     in render $
       -- like this
       transform selector transFun document
       -- or like this
-      runTransforms [(selector, transFun)] document
+      runTransforms [(selector, transFun), …] document
 
 ## License
 
