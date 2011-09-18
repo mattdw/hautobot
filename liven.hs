@@ -2,9 +2,12 @@ module Liven ()
        where
 
 import Text.XmlHtml
+import Control.Monad
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as T
 
+
+-- Predicates
 
 hasId :: String -> Node -> Bool
 hasId id = \node -> getID node == Just (T.pack id)
@@ -33,25 +36,87 @@ hasClass :: String -> Node -> Bool
 hasClass = hasAttrWord "class"
 
 
--- selector examples
--- "a[href]" => [hasAttr "href", hasTag "a"]
--- "#name.kls" => hasClass "kls"  hasId "name"
+-- Transformers
 
-checkPreds :: [(Node -> Bool)] -> Node -> Bool
+setAttr :: String -> String -> Transform
+setAttr k v = (:[]) . setAttribute (T.pack k) (T.pack v)
+
+
+setTag :: String -> Transform
+setTag t n = [n { elementTag = T.pack t }]
+
+
+modifyAttr :: String -> (Maybe T.Text -> Maybe T.Text) -> Transform
+modifyAttr k f = \node -> let attrName = (T.pack k)
+                              val = getAttribute attrName node
+                              val' = f val
+                              notThisAttr (k, _) = k /= attrName
+                          in case val' of
+                            Nothing      -> [node { elementAttrs = filter notThisAttr $ 
+                                                                   elementAttrs node} ]
+                            Just attrVal -> [setAttribute attrName attrVal node]
+
+delAttr k = modifyAttr k $ const Nothing
+
+
+addClass :: String -> Transform
+addClass cls = \node -> if hasClass cls node then [node]
+                        else modifyAttr "class" appendCls node
+  where appendCls (Just t) = Just $ t `T.append` (T.pack " ") `T.append` packedCls
+        appendCls Nothing = Just packedCls
+        packedCls = (T.pack cls)
+
+replaceWith :: [Node] -> Transform
+replaceWith ns = const ns
+
+remove = replaceWith []
+
+
+content :: [Node] -> Transform
+content ns = \node -> [node { elementChildren = ns }]
+
+append :: [Node] -> Transform
+append ns = \node -> [node { elementChildren = (elementChildren node) ++ ns }]
+
+-- selector examples
+-- "a[href]" => [[hasAttr "href", hasTag "a"]]
+-- "#name.kls" => [[hasClass "kls", hasId "name"]]
+-- "section#name article.story h1" => [[hasTag "section", hasId "name"], [hasTag "article", hasClass "story"], [hasTag "h1"]]
+
+checkPreds :: [Node -> Bool] -> Node -> Bool
 checkPreds ps n = all id $ map (flip ($) n) ps
 
 -- Transforms take a node, and return none, one or many Nodes.
 type Transform = Node -> [Node]
-type Selector = Node -> Bool
+type Selector = [[Node -> Bool]]
+
+data Match = Match                 -- node matches
+           | PartialMatch Selector -- node matches prefix. contains remaining 
+                                   --   selector to be matched
+           | NoMatch               -- node does not match
+
+matchSelector :: Selector -> Node -> Match
+matchSelector [] n = NoMatch
+matchSelector [s] n = if checkPreds s n then Match else NoMatch
+matchSelector (s:ss) n = if checkPreds s n then PartialMatch ss else NoMatch
+
 
 -- The high-level:
 run :: [(Selector, Transform)] -> Document -> Document
 run ts doc = foldl (\doc (s, t) -> doTransform s t doc) doc ts
 
 doTransform :: Selector -> Transform -> Document -> Document
-doTransform s t doc = docmap t' doc
+doTransform s t doc = modifyDocContent (doTransform' s t) doc
+
+doTransform' :: Selector -> Transform -> [Node] -> [Node]
+doTransform' s t nodes = concat $ nmap (t' s) nodes
   where
-    t' = \n -> if s n then t n else [n]
+    t' s' = \n -> case matchSelector s' n of
+                    Match -> t n
+                    PartialMatch remainingSel ->
+                      [n { elementChildren = concat $ nmap (t' remainingSel) $
+                                             childNodes n }]
+                    NoMatch -> [n]
 
 
 nmap :: (Node -> [Node]) -> [Node] -> [[Node]]
@@ -62,11 +127,27 @@ nmap f (e:es) = case e of
   
 
 docmap f doc = doc { docContent = concat $ nmap f $ docContent doc }
+modifyDocContent f doc = doc { docContent = f $ docContent doc }
 
 
-testDoc = let htmlBS = BSC.pack "<!doctype html><html><head><title></title></head><body class='c1 c3'><p>p1</p><p>p2</p><section id=aThingHere><p>p3</p></section></body></html>"
+testDoc = let htmlBS = BSC.pack "<!doctype html><html><head><title></title></head><body class='c1 c3'><p>p1</p><p>p2</p><section id='noId'><article><p>p3</p></article></section></body></html>"
               doc = parseHTML "testDoc" htmlBS
           in case doc of
             (Left anError) -> error anError
             (Right doc) ->  doc
 
+
+doTest = doTransform 
+         [[hasTag "body"]]
+         (addClass "test-page" >=> 
+          append [TextNode (T.pack "Some Text")])
+         $ doTransform [[hasTag "p"]]
+         (addClass "old-p" >=>
+          replaceWith [Element (T.pack "p") [] [TextNode (T.pack "111")],
+                       Element (T.pack "p") [] [TextNode (T.pack "222")]] >=>
+          addClass "new-p")
+         $ doTransform 
+         [[hasTag "section"], [hasTag "p"]]
+         (setTag "h1" >=> 
+          append [TextNode (T.pack "here is some updated content")] >=> 
+          setAttr "id" "noeyedeer") testDoc 
