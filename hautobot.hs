@@ -1,4 +1,4 @@
-module Hautobot ()
+module Hautobot
        where
 
 import Text.XmlHtml
