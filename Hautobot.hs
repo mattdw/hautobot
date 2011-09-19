@@ -34,7 +34,7 @@ type Selector = [[Node -> Bool]]
 -- | Does the Node have the given id? (case-sensitive both on the
 -- attribute name @id@, and on the value.)
 hasId :: String -> Node -> Bool
-hasId id = \node -> getID node == Just (T.pack id)
+hasId idStr = \node -> getID node == Just (T.pack idStr)
   where
     getID = getAttribute $ T.pack "id"
 
@@ -81,7 +81,7 @@ modifyAttr :: String -> (Maybe T.Text -> Maybe T.Text) -> Transform
 modifyAttr k f = \node -> let attrName = (T.pack k)
                               val = getAttribute attrName node
                               val' = f val
-                              notThisAttr (k, _) = k /= attrName
+                              notThisAttr (thisName, _) = thisName /= attrName
                           in case val' of
                             Nothing      -> [node { elementAttrs = filter notThisAttr $ 
                                                                    elementAttrs node} ]
@@ -101,7 +101,7 @@ getAttrWords k = let attrName = (T.pack k)
 
 -- | Set an attribute from a list of words. Joins words with spaces.
 setAttrWords :: String -> [T.Text] -> Transform
-setAttrWords k words = \node -> [setAttribute (T.pack k) (T.unwords words) node]
+setAttrWords k wordList = \node -> [setAttribute (T.pack k) (T.unwords wordList) node]
 
 -- | Prepend a word to an attribute. (Won't create duplicates.)
 addAttrWord :: String             -- ^ attribute name
@@ -109,8 +109,8 @@ addAttrWord :: String             -- ^ attribute name
                -> Transform
 addAttrWord k v = \node ->
   let newWord = (T.pack v)
-      words = getAttrWords k node
-      newWords = newWord:(filter (/=newWord) words)
+      asWords = getAttrWords k node
+      newWords = newWord:(filter (/=newWord) asWords)
   in setAttrWords k newWords node
 
 -- | Remove a word from anywhere in an attribute.
@@ -172,7 +172,7 @@ data Match = Match      -- ^ Node matches Selector.
 
 -- | Match a single selector step, returning the appropriate Match.
 matchSelector :: Selector -> Node -> Match
-matchSelector [] n = NoMatch
+matchSelector [] _ = NoMatch
 matchSelector [s] n = if checkPreds s n then Match else NoMatch
 matchSelector (s:ss) n = if checkPreds s n then PartialMatch ss else NoMatch
 
@@ -180,7 +180,7 @@ matchSelector (s:ss) n = if checkPreds s n then PartialMatch ss else NoMatch
 
 -- | run a list of `(Selector, Transform)` pairs across a document
 runTransforms :: [(Selector, Transform)] -> Document -> Document
-runTransforms ts doc = foldl (\doc (s, t) -> transform s t doc) doc ts
+runTransforms ts doc = foldl (\d (s, t) -> transform s t d) doc ts
 
 -- | run a single Selector and Transform across a document
 transform :: Selector -> Transform -> Document -> Document
@@ -201,10 +201,10 @@ transform' s t nodes = concat $ nmap (t' s) nodes
 
 -- | A version of @map@ for the list-tree-list structure of @[Node]@.
 nmap :: (Node -> [Node]) -> [Node] -> [[Node]]
-nmap f [] = []
+nmap _ [] = []
 nmap f (e:es) = case e of
   (Element _ _ children) -> (f e { elementChildren = concat (nmap f children) }):nmap f es
-  otherwise -> (f e):nmap f es
+  _                      -> (f e):nmap f es
   
 -- | Document-aware @map@, for the top-level.
 docmap :: (Node -> [Node]) -> Document -> Document
@@ -218,8 +218,8 @@ modifyDocContent f doc = doc { docContent = f $ docContent doc }
 -- | A basic sample document
 testDoc :: Document
 testDoc = let htmlBS = BSC.pack "<!doctype html><html><head><title></title></head><body class='c1 c3'><p>p1</p><p>p2</p><section id='noId'><article><p>p3</p></article></section></body></html>"
-              doc = parseHTML "testDoc" htmlBS
-          in case doc of
+              parseResult = parseHTML "testDoc" htmlBS
+          in case parseResult of
             (Left anError) -> error anError
             (Right doc) ->  doc
 
