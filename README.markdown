@@ -1,3 +1,5 @@
+**Don't use this, it's slow, broken, and incomplete.**
+
 hautobot is a Haskell approximation of Christophe Grand's Enlive
 (<https://github.com/cgrand/enlive>).
 
